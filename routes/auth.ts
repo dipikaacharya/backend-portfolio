@@ -9,9 +9,9 @@ const router = Router();
 const SALT_ROUNDS = 10;
 
 // Generate JWT token
-function generateToken(user: { id: number; name: string; email: string }): string {
+function generateToken(user: { id: number; name: string; email: string; is_admin: boolean }): string {
     return jwt.sign(
-        { id: user.id, name: user.name, email: user.email },
+        { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin },
         process.env.JWT_SECRET || "fallback_secret",
         { expiresIn: "7d" }
     );
@@ -43,12 +43,13 @@ router.post("/signup", async (req: Request, res: Response): Promise<void> => {
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
         // Insert user
+        const isAdminUser = email === process.env.ADMIN_EMAIL;
         const [result] = await pool.execute<ResultSetHeader>(
-            "INSERT INTO user_details (name, email, password) VALUES (?, ?, ?)",
-            [name, email, hashedPassword]
+            "INSERT INTO user_details (name, email, password, is_admin) VALUES (?, ?, ?, ?)",
+            [name, email, hashedPassword, isAdminUser]
         );
 
-        const newUser = { id: result.insertId, name, email };
+        const newUser = { id: result.insertId, name, email, is_admin: isAdminUser };
         const token = generateToken(newUser);
 
         res.status(201).json({
@@ -94,15 +95,26 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        // Update is_admin status based on current ADMIN_EMAIL (in case it changed)
+        const isAdminUser = email === process.env.ADMIN_EMAIL;
+        if (user.is_admin !== (isAdminUser ? 1 : 0)) {
+            await pool.execute("UPDATE user_details SET is_admin = ? WHERE id = ?", [isAdminUser, user.id]);
+            user.is_admin = isAdminUser ? 1 : 0;
+        }
+
+        // Update activity
+        await pool.execute("UPDATE user_details SET last_active_at = CURRENT_TIMESTAMP WHERE id = ?", [user.id]);
+
         const token = generateToken({
             id: user.id,
             name: user.name,
             email: user.email,
+            is_admin: !!user.is_admin,
         });
 
         res.json({
             message: "Login successful!",
-            user: { id: user.id, name: user.name, email: user.email },
+            user: { id: user.id, name: user.name, email: user.email, is_admin: !!user.is_admin },
             token,
         });
     } catch (error) {
