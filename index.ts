@@ -15,6 +15,11 @@ const PORT = Number(process.env.PORT) || 5000;
 app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json());
 
+// Initialize database on cold start
+initDB().catch((err) => {
+    console.error("Database initialization failed:", err);
+});
+
 // Routes
 app.get("/", (req: Request, res: Response) => {
     res.json({ message: "Hello TypeScript + Express 🚀" });
@@ -26,14 +31,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/resumes", resumeRoutes);
 
-// Start server & initialize database
-initDB()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running at http://localhost:${PORT}`);
-        });
-    })
-    .catch((err) => {
-        console.error("Failed to start server:", err);
-        process.exit(1);
+// Only listen when running locally (not on Vercel)
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
+}
+
+// Export for Vercel serverless
+export default app;
