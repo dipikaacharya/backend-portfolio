@@ -21,3 +21,13 @@ This is the backend service for my personal portfolio website, built using **Nod
 - Express.js
 - dotenv
 - cors
+
+---
+
+## ⚙️ Installation & Setup
+
+```bash
+git clone https://github.com/your-username/your-backend-repo.git
+cd your-backend-repo
+npm install
+npm run dev
