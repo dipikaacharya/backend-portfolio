@@ -31,3 +31,16 @@ git clone https://github.com/your-username/your-backend-repo.git
 cd your-backend-repo
 npm install
 npm run dev
+
+
+```
+## 📦 Deployment
+
+You can deploy this backend on:
+
+Render
+Railway
+Vercel (serverless adaptation needed)
+AWS EC2 / VPS
+
+Make sure to set environment variables in the hosting platform.
